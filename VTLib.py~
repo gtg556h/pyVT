@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy.linalg
 import matplotlib.animation as animation
-#import douglasPeucker
+import douglasPeucker
 
 class tmsd(object):
 
@@ -47,7 +47,7 @@ class tmsd(object):
         indexVec = []
         migrateDist = []
         for i in range(0, self.nParticles):	
-            [psTemp, ixTemp] = dpSimplify(self.x[i],self.tol)
+            [psTemp, ixTemp] = douglasPeucker.dpSimplify(self.x[i],self.tol)
             self.ps.append(psTemp)
             self.ix.append(ixTemp)
             nSegments = ixTemp.shape[0] - 1
@@ -84,15 +84,12 @@ class tmsd(object):
         meanLogSlope=[]
 
         startIndex = np.int(np.round(self.maxTau/2/self.dt))
-        meanRange = np.arange(np.int(np.round(self.slopeMin/self.dt)-1),np.int(np.round(self.slopeMax/self.dt)))
         for i in self.indexVec:
             lVecT = np.shape(self.x[i])[0]
-            self.tau.append(np.arange(self.dt,(2*startIndex+1)*self.dt,self.dt))
+
             MSDxTemp = np.zeros([lVecT-2*startIndex,2*startIndex])
             MSDyTemp = np.zeros_like(MSDxTemp)
             MSDTemp = np.zeros_like(MSDxTemp)
-            meanLogSlopeTemp = np.zeros(lVecT-2*startIndex)
-           
 
             for j in range(startIndex,lVecT-startIndex-1):
                 xVec = self.x[i][j-startIndex:j+startIndex+1,0]
@@ -101,21 +98,15 @@ class tmsd(object):
 
                 if np.mod(j,200)==0:
                     print(j)
-
-                A = np.vstack([np.log(self.tau[i][meanRange]),np.ones(len(meanRange))]).T
-                print(A.shape)
-                m, c = np.linalg.lstsq(A,np.log(MSDxTemp[meanRange]+MSDyTemp[meanRange]))[0]
-                print(A)
-                print(MSDxTemp[meanRange])
-                print(m)
+                m, c = np.linalg.lstsq(A,np.log(self.tau[index][np.round(self.slopeMin/self.dt)-1:np.round(self.slopeMax/self.dt)]))
                 meanLogSlopeTemp[j-startIndex] = m
                 
 
+            self.tau.append(np.arange(self.dt,(2*startIndex+1)*self.dt,self.dt))
             self.t.append(np.arange(0,MSDxTemp.shape[0]*self.dt,self.dt))
             self.MSDx.append(MSDxTemp)
             self.MSDy.append(MSDyTemp)
             self.MSD.append(MSDxTemp + MSDyTemp)
-            self.meanLogSlope.append(meanLogSlopeTemp)
             self.avgMSD.append(np.mean((MSDxTemp + MSDyTemp),axis=0))
             self.xs.append(self.x[i][startIndex:lVecT-startIndex,:])
 
@@ -174,43 +165,4 @@ def MSDcalc(x,y,dt):
 
 def dpSimplify(x,tol):
     # Added 2013.12.28
-
-    ps = [x[0,:]]
-    ix = [0]
-    i1=0
-    i2=1
-
-    while i2 < x.shape[0]:
-        j = i1
-        dComp=0
-        while dComp < tol and j < i2:
-            j+=1
-            v1 = x[i2,:] - x[i1,:]
-            v2 = x[j,:] - x[i1,:]
-            vDiff = v2-np.dot(v1,v2)/np.dot(v1,v1)*v1
-            #print('i1=',i1)
-            #print('i2=',i2)
-            #print('v1=',v1)
-            #print('v2=',v2)
-            #print('vDiff=',vDiff)
-            dComp = np.sqrt(np.dot(vDiff,vDiff))
-            #print('dComp=',dComp)
-        
-        #print('break')
-        if dComp > tol:
-            ix.append(i2-1)
-            ps.append(x[i2-1,:])
-            i1=i2-1
-            #i2 = i1+1
-            #print('ps=',ps)
-        
-        elif j == i2:
-            i2 +=1
-            #print('i2=',i2)
-    #print('i2=',i2)
-    
-    ix.append(i2-1)
-    ps.append(x[i2-1,:])
-    
-    return np.asarray(ps), np.asarray(ix)
 
