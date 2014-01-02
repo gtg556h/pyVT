@@ -81,7 +81,7 @@ class tmsd(object):
         self.tau=[]
         self.t = []
         self.xs = []
-        meanLogSlope=[]
+        self.meanLogSlope=[]
 
         startIndex = np.int(np.round(self.maxTau/2/self.dt))
         meanRange = np.arange(np.int(np.round(self.slopeMin/self.dt)-1),np.int(np.round(self.slopeMax/self.dt)))
@@ -94,7 +94,7 @@ class tmsd(object):
             meanLogSlopeTemp = np.zeros(lVecT-2*startIndex)
            
 
-            for j in range(startIndex,lVecT-startIndex-1):
+            for j in range(startIndex,lVecT-startIndex):
                 xVec = self.x[i][j-startIndex:j+startIndex+1,0]
                 yVec = self.x[i][j-startIndex:j+startIndex+1,1]
                 [MSDxTemp[j-startIndex,:], MSDyTemp[j-startIndex,:]] = MSDcalc(xVec,yVec,self.dt)
@@ -103,11 +103,12 @@ class tmsd(object):
                     print(j)
 
                 A = np.vstack([np.log(self.tau[i][meanRange]),np.ones(len(meanRange))]).T
-                print(A.shape)
-                m, c = np.linalg.lstsq(A,np.log(MSDxTemp[meanRange]+MSDyTemp[meanRange]))[0]
-                print(A)
-                print(MSDxTemp[meanRange])
-                print(m)
+                #print(A.shape)
+                m, c = np.linalg.lstsq(A,np.log(MSDxTemp[j-startIndex,meanRange]+MSDyTemp[j-startIndex,meanRange]))[0]
+                #1/0
+                #print(A)
+                #print(MSDxTemp[meanRange])
+                #print(m)
                 meanLogSlopeTemp[j-startIndex] = m
                 
 
