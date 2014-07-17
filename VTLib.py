@@ -2,13 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy.linalg
 import matplotlib.animation as animation
+import pdb
 #import douglasPeucker
 
 class tmsd(object):
 
     def __init__(self, params, x):
         print('Initializing system')
-        #self.x = [x,y]
         self.x = x
         self.tol = params['tol']
         self.theta0 = params['theta0']
@@ -41,26 +41,29 @@ class tmsd(object):
 
         print('Building Particle List')
         
-        self.ps=[]
-        self.ix=[]
+        self.ps=np.zeros(self.nParticles, dtype=object)
+        self.ix=np.zeros(self.nParticles, dtype=object)
 
         indexVec = []
-        migrateDist = []
+        migrateDist = np.zeros(self.nParticles)
         for i in range(0, self.nParticles):	
             [psTemp, ixTemp] = dpSimplify(self.x[i],self.tol)
-            self.ps.append(psTemp)
-            self.ix.append(ixTemp)
+            #self.ps.append(psTemp)
+            self.ps[i] = psTemp
+            #self.ix.append(ixTemp)
+            self.ix[i] = ixTemp
             nSegments = ixTemp.shape[0] - 1
             migrateDistTemp = 0
             for j in range(0,nSegments):
                 migrateDistTemp += np.linalg.norm(psTemp[j+1,:]-psTemp[j,:])
             print(migrateDistTemp)
-            migrateDist.append(migrateDistTemp)
+            #migrateDist.append(migrateDistTemp)
+            migrateDist[i] = migrateDistTemp
             if migrateDistTemp > lengthMin and np.shape(x[i])[0] > minTime:
                 indexVec.append(i)
 
         self.indexVec = indexVec
-        self.migrateDist = migrateDist
+        self.migrateDist = np.asarray(migrateDist)
 
         if compact==1:
             self.compactToIndexVec()
@@ -68,10 +71,18 @@ class tmsd(object):
     ############################################################ 
 
     def compactToIndexVec(self):
-        print('Not complete')
+
         # Execute this script to compact x, etc..., prior to execution of 
         # self.continuousMSD, to eliminate all data not interesting (by 
         # determination of indexVec)
+
+        sieve = np.where(self.migrateDist > self.lengthMin)[0]
+        self.x = self.x[sieve]
+        self.ps = self.ps[sieve]
+        self.ix = self.ix[sieve]
+        self.migrateDist = self.migrateDist[sieve]
+        self.nParticles = sieve.shape[0]
+
 
     def continuousMSD(self):
         self.MSD=[]
@@ -103,13 +114,9 @@ class tmsd(object):
                     print(j)
 
                 A = np.vstack([np.log(self.tau[i][meanRange]),np.ones(len(meanRange))]).T
-                #print(A.shape)
                 m, c = np.linalg.lstsq(A,np.log(MSDxTemp[j-startIndex,meanRange]+MSDyTemp[j-startIndex,meanRange]))[0]
-                #1/0
-                #print(A)
-                #print(MSDxTemp[meanRange])
-                #print(m)
                 meanLogSlopeTemp[j-startIndex] = m
+                #pdb.set_trace()
                 
 
             self.t.append(np.arange(0,MSDxTemp.shape[0]*self.dt,self.dt))
@@ -166,8 +173,14 @@ def MSDcalc(x,y,dt):
 
     for i in range(1,lVecT):
         for j in np.arange(1,lVecT-i,i):
-            MSDx[i] = MSDx[i] + ((x[i+j] - x[j])**2)/np.floor((lVecT-1)/i)
-            MSDy[i] = MSDy[i] + ((y[i+j] - y[j])**2)/np.floor((lVecT-1)/i)
+            MSDx[i] = MSDx[i] + ((x[i+j] - x[j])**2)/np.floor((lVecT-2)/i)
+            MSDy[i] = MSDy[i] + ((y[i+j] - y[j])**2)/np.floor((lVecT-2)/i)
+        if i > 1:
+            pdb.set_trace()
+            if MSDx[i] < MSDx[i-1]:
+                print(i)
+                print(j)
+                pdb.set_trace()
 
     return MSDx, MSDy
 
@@ -189,26 +202,15 @@ def dpSimplify(x,tol):
             v1 = x[i2,:] - x[i1,:]
             v2 = x[j,:] - x[i1,:]
             vDiff = v2-np.dot(v1,v2)/np.dot(v1,v1)*v1
-            #print('i1=',i1)
-            #print('i2=',i2)
-            #print('v1=',v1)
-            #print('v2=',v2)
-            #print('vDiff=',vDiff)
             dComp = np.sqrt(np.dot(vDiff,vDiff))
-            #print('dComp=',dComp)
         
-        #print('break')
         if dComp > tol:
             ix.append(i2-1)
             ps.append(x[i2-1,:])
             i1=i2-1
-            #i2 = i1+1
-            #print('ps=',ps)
         
         elif j == i2:
             i2 +=1
-            #print('i2=',i2)
-    #print('i2=',i2)
     
     ix.append(i2-1)
     ps.append(x[i2-1,:])
